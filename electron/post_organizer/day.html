@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Day Information</title>
+    <style>
+      img {
+        max-width: 100px;
+        max-height: 100px;
+        width: auto;
+        height: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Date: <span id="formattedDate"></span></h1>
+    <button onclick="goBack()">Go Back</button>
+
+    <h2>Facebook</h2>
+    <textarea
+      id="facebook"
+      rows="10"
+      cols="50"
+      placeholder="Enter text"
+    ></textarea>
+    <input
+      type="file"
+      accept="image/*"
+      onchange="displayPhoto(event, 'facebook')"
+    />
+    <table>
+      <thead>
+        <tr>
+          <th>Uploaded Photos</th>
+        </tr>
+      </thead>
+      <tbody id="facebookPhotos">
+        <!-- Display uploaded photos here -->
+      </tbody>
+    </table>
+
+    <h2>Instagram</h2>
+    <textarea
+      id="instagram"
+      rows="10"
+      cols="50"
+      placeholder="Enter text (100 words)"
+    ></textarea>
+    <input
+      type="file"
+      accept="image/*"
+      onchange="displayPhoto(event, 'instagram')"
+    />
+    <table>
+      <thead>
+        <tr>
+          <th>Uploaded Photos</th>
+        </tr>
+      </thead>
+      <tbody id="instagramPhotos">
+        <!-- Display uploaded photos here -->
+      </tbody>
+    </table>
+
+    <h2>Twitter</h2>
+    <textarea
+      id="twitter"
+      rows="10"
+      cols="50"
+      placeholder="Enter text (100 words)"
+    ></textarea>
+    <input
+      type="file"
+      accept="image/*"
+      onchange="displayPhoto(event, 'twitter')"
+    />
+    <table>
+      <thead>
+        <tr>
+          <th>Uploaded Photos</th>
+        </tr>
+      </thead>
+      <tbody id="twitterPhotos">
+        <!-- Display uploaded photos here -->
+      </tbody>
+    </table>
+
+    <button onclick="saveSections()">Save</button>
+
+    <script>
+      // Get the URL parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      const date = urlParams.get("date");
+      const month = urlParams.get("month");
+      const year = urlParams.get("year");
+
+      // save_date struct
+      const save_date = {
+        date: "",
+        sections: {
+          facebook: {
+            text: "",
+            photos: [],
+          },
+          instagram: {
+            text: "",
+            photos: [],
+          },
+          twitter: {
+            text: "",
+            photos: [],
+          },
+        },
+      };
+      // Format the date
+      const formattedDate = `${date}.${month}.${year}`;
+
+      // Display the formatted date
+      document.getElementById("formattedDate").textContent = formattedDate;
+
+      // Display the selected photo
+      function displayPhoto(event, sectionId) {
+        const file = event.target.files[0];
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          const img = document.createElement("img");
+          img.src = e.target.result;
+          document.getElementById(sectionId + "Photos").appendChild(img);
+        };
+        reader.readAsDataURL(file);
+      }
+
+      // Go back to the previous page
+      function goBack() {
+        window.history.back();
+      }
+
+      // Save the sections
+      function saveSections() {
+        // Get the date
+        save_date.date = formattedDate;
+
+        // Get the text from each section
+        const facebookTextarea = document.querySelector("#facebook textarea");
+        const instagramTextarea = document.querySelector("#instagram textarea");
+        const twitterTextarea = document.querySelector("#twitter textarea");
+
+        // Check if the textareas exist before accessing their value property
+        const facebookText = document.getElementById("facebook").value;
+        const instagramText = document.getElementById("instagram").value;
+        const twitterText = document.getElementById("twitter").value;
+        
+        // Get the photos from each section
+        const facebookPhotos = document.querySelectorAll("#facebookPhotos img");
+        const instagramPhotos = document.querySelectorAll(
+          "#instagramPhotos img"
+        );
+        const twitterPhotos = document.querySelectorAll("#twitterPhotos img");
+
+        // Add the text to the save_date struct
+        save_date.sections.facebook.text = facebookText;
+        save_date.sections.instagram.text = instagramText;
+        save_date.sections.twitter.text = twitterText;
+
+        // Add the photos to the save_date struct
+        facebookPhotos.forEach(function (photo, index) {
+          save_date.sections.facebook.photos.push(
+            `facebook_${formattedDate}_photo${index}`
+          );
+        });
+        instagramPhotos.forEach(function (photo, index) {
+          save_date.sections.instagram.photos.push(
+            `instagram_${formattedDate}_photo${index}`
+          );
+        });
+        twitterPhotos.forEach(function (photo, index) {
+          save_date.sections.twitter.photos.push(
+            `twitter_${formattedDate}_photo${index}`
+          );
+        });
+
+        const fs = require("graceful-fs");
+        const path = require("path");
+
+        // Read the existing save.json file
+        fs.readFile("./save/save.json", "utf8", function (err, data) {
+          if (err) {
+            console.log(err);
+          } else {
+            let saveData = [];
+            if (data) {
+              saveData = JSON.parse(data);
+            }
+
+            // Check if the save.json file is empty
+            const isSaveJsonEmpty = saveData.length === 0;
+
+            if (isSaveJsonEmpty) {
+              console.log("The save.json file is empty.");
+              saveData.push(save_date);
+
+              // Save the updated save.json file
+              fs.writeFile(
+                "./save/save.json",
+                JSON.stringify(saveData),
+                function (err) {
+                  if (err) {
+                    console.log(err);
+                  } else {
+                    console.log("JSON file saved successfully.");
+
+                    // Save the photos
+                    const saveDirectory = "./save/photos/";
+
+                    // Save Facebook photos
+                    facebookPhotos.forEach(function (photo, index) {
+                      const photoData = photo.src.split(",")[1];
+                      const photoExtension = photo.src
+                        .split(";")[0]
+                        .split("/")[1];
+                      const photoPath = path.join(
+                        saveDirectory,
+                        `facebook_${formattedDate}_photo${index}.${photoExtension}`
+                      );
+                      fs.writeFile(
+                        photoPath,
+                        photoData,
+                        "base64",
+                        function (err) {
+                          if (err) {
+                            console.log(err);
+                          } else {
+                            console.log(
+                              `Facebook photo ${index} saved successfully.`
+                            );
+                          }
+                        }
+                      );
+                    });
+
+                    // Save Instagram photos
+                    instagramPhotos.forEach(function (photo, index) {
+                      const photoData = photo.src.split(",")[1];
+                      const photoExtension = photo.src
+                        .split(";")[0]
+                        .split("/")[1];
+                      const photoPath = path.join(
+                        saveDirectory,
+                        `instagram_${formattedDate}_photo${index}.${photoExtension}`
+                      );
+                      fs.writeFile(
+                        photoPath,
+                        photoData,
+                        "base64",
+                        function (err) {
+                          if (err) {
+                            console.log(err);
+                          } else {
+                            console.log(
+                              `Instagram photo ${index} saved successfully.`
+                            );
+                          }
+                        }
+                      );
+                    });
+
+                    // Save Twitter photos
+                    twitterPhotos.forEach(function (photo, index) {
+                      const photoData = photo.src.split(",")[1];
+                      const photoExtension = photo.src
+                        .split(";")[0]
+                        .split("/")[1];
+                      const photoPath = path.join(
+                        saveDirectory,
+                        `twitter_${formattedDate}_photo${index}.${photoExtension}`
+                      );
+                      fs.writeFile(
+                        photoPath,
+                        photoData,
+                        "base64",
+                        function (err) {
+                          if (err) {
+                            console.log(err);
+                          } else {
+                            console.log(
+                              `Twitter photo ${index} saved successfully.`
+                            );
+                          }
+                        }
+                      );
+                    });
+                  }
+                }
+              );
+            } else {
+              // Check if the current date already exists in the save.json file
+              const currentDateIndex = saveData.findIndex(
+                (item) => item.date === formattedDate
+              );
+
+              if (currentDateIndex !== -1) {
+                // Update the existing current date
+                saveData[currentDateIndex] = save_date;
+              } else {
+                // Push the new current date into the list
+                saveData.push(save_date);
+              }
+
+              // Save the updated save.json file
+              fs.writeFile(
+                "./save/save.json",
+                JSON.stringify(saveData),
+                function (err) {
+                  if (err) {
+                    console.log(err);
+                  } else {
+                    console.log("JSON file saved successfully.");
+
+                    // Save the photos
+                    const saveDirectory = "./save/photos/";
+
+                    // Save Facebook photos
+                    facebookPhotos.forEach(function (photo, index) {
+                      const photoData = photo.src.split(",")[1];
+                      const photoExtension = photo.src
+                        .split(";")[0]
+                        .split("/")[1];
+                      const photoPath = path.join(
+                        saveDirectory,
+                        `facebook_${formattedDate}_photo${index}.${photoExtension}`
+                      );
+                      fs.writeFile(
+                        photoPath,
+                        photoData,
+                        "base64",
+                        function (err) {
+                          if (err) {
+                            console.log(err);
+                          } else {
+                            console.log(
+                              `Facebook photo ${index} saved successfully.`
+                            );
+                          }
+                        }
+                      );
+                    });
+
+                    // Save Instagram photos
+                    instagramPhotos.forEach(function (photo, index) {
+                      const photoData = photo.src.split(",")[1];
+                      const photoExtension = photo.src
+                        .split(";")[0]
+                        .split("/")[1];
+                      const photoPath = path.join(
+                        saveDirectory,
+                        `instagram_${formattedDate}_photo${index}.${photoExtension}`
+                      );
+                      fs.writeFile(
+                        photoPath,
+                        photoData,
+                        "base64",
+                        function (err) {
+                          if (err) {
+                            console.log(err);
+                          } else {
+                            console.log(
+                              `Instagram photo ${index} saved successfully.`
+                            );
+                          }
+                        }
+                      );
+                    });
+
+                    // Save Twitter photos
+                    twitterPhotos.forEach(function (photo, index) {
+                      const photoData = photo.src.split(",")[1];
+                      const photoExtension = photo.src
+                        .split(";")[0]
+                        .split("/")[1];
+                      const photoPath = path.join(
+                        saveDirectory,
+                        `twitter_${formattedDate}_photo${index}.${photoExtension}`
+                      );
+                      fs.writeFile(
+                        photoPath,
+                        photoData,
+                        "base64",
+                        function (err) {
+                          if (err) {
+                            console.log(err);
+                          } else {
+                            console.log(
+                              `Twitter photo ${index} saved successfully.`
+                            );
+                          }
+                        }
+                      );
+                    });
+                  }
+                }
+              );
+            }
+          }
+        });
+
+        console.log(save_date);
+      }
+    </script>
+  </body>
+</html>

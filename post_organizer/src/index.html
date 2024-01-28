@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <title id="title"></title>
+        <style>
+            .photo {
+                max-width: 150px;
+                max-height: 150px;
+                object-fit: contain;
+                cursor: pointer; /* Add cursor style to indicate clickable */
+            }
+        </style>
+    </head>
+    <body>
+        <h1 id="date"></h1>
+        <button id="calendarButton">Calendar</button>
+
+        <div id="postContent"></div>
+
+        <script>
+            // Get today's date
+            const today = new Date();
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            const formattedDate = today.toLocaleDateString(undefined, options);
+
+            // Set the date as the title
+            const titleElement = document.getElementById('title');
+            titleElement.innerText = formattedDate;
+
+            // Set the date as the heading
+            const dateElement = document.getElementById('date');
+            dateElement.innerText = formattedDate;
+
+            // Open calendar.html when the button is clicked
+            const calendarButton = document.getElementById('calendarButton');
+            calendarButton.addEventListener('click', () => {
+                window.location.href = 'calendar.html';
+            });
+            
+
+            
+            const currentPath = window.location.pathname;
+            console.log(currentPath);
+            // Fetch the JSON file
+            fetch('C:/post_organizer/src/save/save.json')
+                .then(response => response.json())
+                .then(data => {
+                    // get todays date
+                    const today = new Date();
+                    const todaysDate = `${today.getDate()}.${today.getMonth() + 1}.${today.getFullYear()}`;
+                    console.log(todaysDate);
+
+                    // Find today's entry
+                    const todayEntry = data.find(entry => {
+                        console.log(`Comparing entry.date (${entry.date}) with formattedDate (${todaysDate})`);
+                        return entry.date === todaysDate;
+                    });
+                    console.log(todayEntry);
+
+                    // Check if today's entry exists
+                    if (todayEntry) {
+                        // Display the text and photos
+                        const postContent = document.getElementById('postContent');
+                        postContent.innerHTML = `
+                            <h2>${formattedDate}</h2>
+                            <section id="facebookSection">
+                                <h3>Facebook</h3>
+                                <p>${todayEntry.sections.facebook.text}</p>
+                                <div>
+                                    ${todayEntry.sections.facebook.photos.map(photo => `
+                                        <a href="C:/post_organizer/src/save/photos/${photo}.jpg" download="${photo}.jpg">
+                                            <img class="photo" src="C:/post_organizer/src/save/photos/${photo}.jpg" alt="${photo}">
+                                        </a>
+                                    `).join('')}
+                                </div>
+                            </section>
+                            <section id="instagramSection">
+                                <h3>Instagram</h3>
+                                <p>${todayEntry.sections.instagram.text}</p>
+                                <div>
+                                    ${todayEntry.sections.instagram.photos.map(photo => `
+                                        <a href="C:/post_organizer/save/photos/${photo}.jpg" download="${photo}.jpg">
+                                            <img class="photo" src="C:/post_organizer/save/photos/${photo}.jpg" alt="${photo}">
+                                        </a>
+                                    `).join('')}
+                                </div>
+                            </section>
+                            <section id="twitterSection">
+                                <h3>Twitter</h3>
+                                <p>${todayEntry.sections.twitter.text}</p>
+                                <div>
+                                    ${todayEntry.sections.twitter.photos.map(photo => `
+                                        <a href="C:/post_organizer/save/photos/${photo}.jpg" download="${photo}.jpg">
+                                            <img class="photo" src="C:/post_organizer/save/photos/${photo}.jpg" alt="${photo}">
+                                        </a>
+                                    `).join('')}
+                                </div>
+                            </section>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        </script>
+    </body>
+</html>
